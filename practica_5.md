@@ -253,8 +253,8 @@ BEGIN
         write(doc);
         SELECT servidor.enviarDocumento(doc,listo);
         OR DELAY(120);
-        ELSE
             DELAY(60);
+        END SELECT;
     END LOOP;
 END usuario;
 
@@ -349,4 +349,129 @@ BEGIN
     equipos[equipo].terminar(valorMonedas);
     ACCEPT ganador(idGanador: OUT int); END ganador;
 END persona;
+```
+
+### 7) Hay un sistema de reconocimiento de huellas dactilares de la policía que tiene 8 Servidores para realizar el reconocimiento, cada uno de ellos trabajando con una Base de Datos propia. A su vez hay un Especialista que utiliza indefinidamente. El sistema funciona de la siguiente manera: el Especialista toma una imagen de una huella (TEST) y se la envía a los servidores para que cada uno de ellos le devuelva el código y el valor de similitud de la huella que más se asemeja a TEST en su BD; al final del procesamiento, el especialista debe conocer el código de la huella con mayor valor de similitud entre las devueltas por los 8 servidores. Cuando ha terminado de procesar una huella comienza nuevamente todo el ciclo.
+#### Nota: suponga que existe una función Buscar(test, código, valor) que utiliza cada Servidor donde recibe como parámetro de entrada la huella test, y devuelve como parámetros de salida el código y el valor de similitud de la huella más parecida a test en la BD correspondiente. Maximizar la concurrencia y no generar demora innecesaria.
+
+```ada
+TASK TYPE servidor IS
+    ENTRY enviarMuestra(test: IN text);
+END servidor;
+
+TASK especialista IS
+    ENTR enviarResultados(codigo: IN integer,similitud: IN integer);
+
+servidores = array[0..7] of servidor;
+
+TASK BODY servidor IS
+VAR
+    muestra: text;
+    codigo, similitud: integer;
+BEGIN
+
+    ACCEPT enviarMuestra(test: IN text); muestra := test; END enviarMuestra;
+    Buscar(test,codigo,similitud);
+    especialista.enviarResultados(codigo,similitud);
+END servidor;
+
+TASK BODY persona IS
+VAR
+    i, codigoMayor: integer;
+    huella: text;
+    codigos = array[0..7] of integer;
+    similitudes = array[0..7] of integer;
+BEGIN
+    text huella;
+    for i:=0 to 7 LOOP
+        servidor[i].enviarMuestra(huella);
+    END LOOP;
+
+    for i:=0 to 7 LOOP
+        ACCEPT enviarResultados(codigo: IN integer,similitud: IN integer) do
+            codigos[i] := codigo; similitudes[i] := similitud;
+        END enviarResultados;
+    END LOOP;
+
+    codigoMayor := codigos[similitudes.indexOf(similitudes.max())];
+END persona;
+```
+
+### 8) Una empresa de limpieza se encarga de recolectar residuos en una ciudad por medio de 3 camiones. Hay P personas que hacen continuos reclamos hasta que uno de los camiones pase por su casa. Cada persona hace un reclamo, espera a lo sumo 15 minutos a que llegue un camión y si no vuelve a hacer el reclamo y a esperar a lo sumo 15 minutos a que llegue un camión y así sucesivamente hasta que el camión llegue y recolecte los residuos; en ese momento deja de hacer reclamos y se va. Cuando un camión está libre la empresa lo envía a la casa de la persona que más reclamos ha hecho sin ser atendido.
+#### Nota: maximizar la concurrencia.
+
+
+```ada
+TASK TYPE camion;
+
+TASK TYPE persona;
+
+TASK empresa;
+
+camiones = array[0..2] of camion;
+
+personas = array[0..P-1] of persona;
+
+TASK BODY camion IS
+VAR
+    clienteAtender: integer;
+BEGIN
+    WHILE (true) LOOP
+        empresa.estoyLibre(id);
+        ACCEPT recibirReclamo(cliente: IN int); clienteAtender := cliente; END recibirReclamo;
+        // Va y recolecta residuos
+        empresa.terminarReclamo(clienteAtender,id);
+    END LOOP;
+
+TASK BODY empresa IS
+VAR
+    estadoCamiones = array[0..2] of boolean;
+    camionesLibres,camionAct: integer;
+    atenderUsuarios = queue of integer;
+BEGIN
+    camionesLibres := 3;
+    WHILE (true) LOOP
+        SELECT // Está bien usar el if adentro del ACCEPT o uso WHEN
+            ACCEPT enviarReclamo(id: IN integer) DO
+                if (camionesLibres > 0){
+                    camionAct := estadoCamiones.indexOf(true);
+                    camiones[camionAct].recibirReclamo(id);
+                    estadoCamiones[camionAct] := false;
+                    camionesLibres -= 1;
+                } else {
+                    atenderUsuarios.push(id);
+                }
+            END enviarReclamo;
+        OR
+            ACCEPT terminarReclamo(cliente: IN integer,camion: IN integer) DO
+                personas[cliente].reclamoAtendido();
+                if (not empty(atenderUsuarios)){
+                    camiones[camion].recibirReclamo(atenderUsuarios.pop());
+                } else {
+                    camionesLibres++;
+                    estadoCamiones[camion] := true;
+                }
+            END terminarReclamo;
+        END SELECT;
+    END LOOP;
+END empresa;
+
+
+END;
+
+TASK BODY persona IS
+VAR
+    llego: boolean;
+BEGIN
+    llego := false;
+    WHILE (NOT llego) LOOP
+        SELECT
+            empresa.enviarReclamo(id)
+        OR
+            ACCEPT empresa.reclamoAtendido() DO
+                llego := true;
+            END reclamoAtendido;
+        ELSE DELAY (900);
+        END SELECT;
+    END LOOP;
 ```
