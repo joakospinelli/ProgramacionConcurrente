@@ -175,13 +175,21 @@ BEGIN
         OR WHEN (atenderEnfermo'count = 0) -> ACCEPT atenderNormal(estadoAux); estadoAux := true; END atenderNormal(estadoAux);
         OR WHEN (atenderEnfermo'count = 0 AND atenderNormal'count = 0) -> ACCEPT atenderEnfermera(); END atenderEnfermera();
         ELSE
-            SELECT anotador.verNota(notaAux: OUT text);
-            OR
-                DELAY(x);
+            SELECT anotador.verNota(notaAux: OUT text); DELAY(x);
             END SELECT;
         END SELECT;
     END LOOP;
 END
+
+TASK BODY secretaria IS
+VAR
+    text nota;
+BEGIN
+    WHILE (true) LOOP
+        anotador.verNota(notaAux: OUT text);
+        medico.enviarnota(nota);
+    END LOOP;
+END;
 
 TASK BODY anotador IS
 VAR
@@ -216,7 +224,7 @@ BEGIN
     atendido := false; intentos := 0;
 
     WHILE (NOT atendido AND intentos < 3) LOOP
-        cant += 1;
+        intentos += 1;
         if (estaEnferma) then begin
             SELECT medico.atenderEnfermo(atendido: OUT boolean);
             OR DELAY(300)
@@ -304,7 +312,7 @@ BEGIN
     END LOOP;
 
     WHILE (miembros < 4) LOOP
-        ACCEPT terminar(valorMonedas: IN integer); puntos += valorMonedas; END terminar;
+        ACCEPT terminar(valorMonedas: IN integer); puntos += valorMonedas; miembros += 1; END terminar;
     END LOOP;
 
     coordinador.verResultados(puntos,id);
@@ -349,6 +357,11 @@ BEGIN
     equipos[equipo].terminar(valorMonedas);
     ACCEPT ganador(idGanador: OUT int); END ganador;
 END persona;
+
+BODY
+ // Mando id a c/persona
+  // Mando id a c/equipo
+END body;
 ```
 
 ### 7) Hay un sistema de reconocimiento de huellas dactilares de la policía que tiene 8 Servidores para realizar el reconocimiento, cada uno de ellos trabajando con una Base de Datos propia. A su vez hay un Especialista que utiliza indefinidamente. El sistema funciona de la siguiente manera: el Especialista toma una imagen de una huella (TEST) y se la envía a los servidores para que cada uno de ellos le devuelva el código y el valor de similitud de la huella que más se asemeja a TEST en su BD; al final del procesamiento, el especialista debe conocer el código de la huella con mayor valor de similitud entre las devueltas por los 8 servidores. Cuando ha terminado de procesar una huella comienza nuevamente todo el ciclo.
@@ -416,6 +429,7 @@ TASK BODY camion IS
 VAR
     clienteAtender: integer;
 BEGIN
+    // recibirid
     WHILE (true) LOOP
         empresa.estoyLibre(id);
         ACCEPT recibirReclamo(cliente: IN int); clienteAtender := cliente; END recibirReclamo;
@@ -431,7 +445,7 @@ VAR
 BEGIN
     camionesLibres := 3;
     WHILE (true) LOOP
-        SELECT // Está bien usar el if adentro del ACCEPT o uso WHEN
+        SELECT // Debería ser un array en vez de una cola
             ACCEPT enviarReclamo(id: IN integer) DO
                 if (camionesLibres > 0){
                     camionAct := estadoCamiones.indexOf(true);
@@ -439,7 +453,8 @@ BEGIN
                     estadoCamiones[camionAct] := false;
                     camionesLibres -= 1;
                 } else {
-                    atenderUsuarios.push(id);
+                    if NOT (atenderUsuarios.contains(id))
+                        atenderUsuarios.push(id);
                 }
             END enviarReclamo;
         OR
@@ -465,9 +480,8 @@ VAR
 BEGIN
     llego := false;
     WHILE (NOT llego) LOOP
+        empresa.enviarReclamo(id)
         SELECT
-            empresa.enviarReclamo(id)
-        OR
             ACCEPT empresa.reclamoAtendido() DO
                 llego := true;
             END reclamoAtendido;
