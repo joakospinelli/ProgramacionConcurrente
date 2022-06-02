@@ -170,13 +170,10 @@ VAR
     notaAux: text;
 BEGIN
     WHILE (true) LOOP
-        SELECT
-            ACCEPT atenderEnfermo(estadoAux); estadoAux := true; END atenderEnfermo(estadoAux);
-        OR WHEN (atenderEnfermo'count = 0) -> ACCEPT atenderNormal(estadoAux); estadoAux := true; END atenderNormal(estadoAux);
-        OR WHEN (atenderEnfermo'count = 0 AND atenderNormal'count = 0) -> ACCEPT atenderEnfermera(); END atenderEnfermera();
-        ELSE
-            SELECT anotador.verNota(notaAux: OUT text); DELAY(x);
-            END SELECT;
+        SELECT ACCEPT atenderEnfermo(estadoAux); estadoAux := true; END atenderEnfermo(estadoAux);
+            OR WHEN (atenderEnfermo'count = 0) -> ACCEPT atenderNormal(estadoAux); estadoAux := true; END atenderNormal(estadoAux);
+            OR WHEN (atenderEnfermo'count = 0 AND atenderNormal'count = 0) -> ACCEPT atenderEnfermera(); END atenderEnfermera();
+            OR WHEN (atenderEnfermo'count = 0 AND atenderNormal'count = 0 AND atenderEnfermera'count = 0) -> ACCEPT enviarNota(notaAux); DELAY(x); END enviarNota;
         END SELECT;
     END LOOP;
 END
@@ -282,11 +279,13 @@ END servidor;
 #### Nota: maximizar la concurrencia. Suponga que para simular la búsqueda de una moneda por parte de una persona existe una función Moneda() que retorna el valor de la moneda encontrada
 ```ada
 TASK TYPE persona IS
+    ENTRY enviarId(miId: IN integer);
     ENTRY empezar();
     ENTRY ganador(idGanador: OUT integer);
 END persona;
 
 TASK TYPE equipo IS
+    ENTRY enviarId(miId: IN integer);
     ENTRY llegada(id: IN integer);
     ENTRY terminar(valorMonedas: IN integer);
 END equipo;
@@ -303,6 +302,10 @@ VAR
     miembros, puntos, i: integer;
     idMiembros: array[0..3] of integer;
 BEGIN
+    ACCEPT enviarId(miId: IN integer);
+        id := miId;
+    END enviarId;
+    
     FOR i in 0..3 LOOP
         ACCEPT llegada(id: IN int); idMiembros[miembros] := id; END llegada;
     END LOOP;
@@ -323,7 +326,6 @@ VAR
     i, mejorEquipo, mejorPuntaje: integer; equipos: array[0..4] of int;
 BEGIN
     mejorPuntaje := -1;
-
     for i in 0..4 LOOP
         ACCEPT verResultados(puntos: IN integer;id: IN integer) do
             equipos[id] := puntos;
@@ -342,8 +344,12 @@ END coordinador;
 
 TASK BODY persona IS
 VAR
-    equipo, monedas, idGanador, valorMonedas: integer;
+    equipo, monedas, idGanador, valorMonedas, id: integer;
 BEGIN
+    ACCEPT enviarId(miId: IN integer);
+        id := miId;
+    END enviarId;
+
     equipo := ...;
     valorMonedas := 0;
     monedas := 0;
@@ -358,9 +364,16 @@ BEGIN
     ACCEPT ganador(idGanador: OUT int); END ganador;
 END persona;
 
-BODY
- // Mando id a c/persona
-  // Mando id a c/equipo
+VAR
+    i: integer;
+BEGIN
+    for i in 0..19 LOOP
+        personas[i].enviarId(i);
+    END LOOP;
+
+    for i in 0..4 LOOP
+        grupos[i].enviarId(i);
+    END LOOP;
 END body;
 ```
 
@@ -415,9 +428,13 @@ END persona;
 
 
 ```ada
-TASK TYPE camion;
+TASK TYPE camion IS
+    ENTRY enviarId(miId: IN integer);
+END camion;
 
-TASK TYPE persona;
+TASK TYPE persona IS
+    ENTRY enviarId(miId: IN integer);
+END persona;
 
 TASK empresa;
 
@@ -427,9 +444,11 @@ personas = array[0..P-1] of persona;
 
 TASK BODY camion IS
 VAR
-    clienteAtender: integer;
+    clienteAtender, id: integer;
 BEGIN
-    // recibirid
+    ACCEPT enviarId(miId: IN integer);
+        id := miId;
+    END enviarId;
     WHILE (true) LOOP
         empresa.estoyLibre(id);
         ACCEPT recibirReclamo(cliente: IN int); clienteAtender := cliente; END recibirReclamo;
@@ -477,8 +496,12 @@ END;
 TASK BODY persona IS
 VAR
     llego: boolean;
+    id: integer;
 BEGIN
     llego := false;
+    ACCEPT enviarId(miId: IN integer);
+        id := miId;
+    END enviarId;
     WHILE (NOT llego) LOOP
         empresa.enviarReclamo(id)
         SELECT
@@ -488,4 +511,15 @@ BEGIN
         ELSE DELAY (900);
         END SELECT;
     END LOOP;
+END;
+
+BEGIN
+    for i in 0..P-1 LOOP
+        personas[i].enviarId(i);
+    END LOOP;
+
+    for i in 0..2 LOOP
+        camiones[i].enviarId(i);
+    END LOOP;
+END;
 ```
