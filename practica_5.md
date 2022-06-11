@@ -428,6 +428,8 @@ END persona;
 
 
 ```ada
+--  Leí mal el enunciado y no hice lo de enviar el camión a la persona que hizo más reclamos (sería un array en vez de una cola en la empresa) --
+
 TASK TYPE camion IS
     ENTRY enviarId(miId: IN integer);
 END camion;
