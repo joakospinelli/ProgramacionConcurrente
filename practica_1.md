@@ -99,7 +99,7 @@ Process persona[id:0..N-1]{
 
 ## 5.e)
 ```java
-// Habría que proteger el agregarOrdenado? (PREGUNTAR)
+// Habría que proteger el agregarOrdenado? Como agrega ordenado no sé si habría interferencia (PREGUNTAR)
 colaOrdenada llegada(int);
 int siguiente = -1;
 boolean libre = true;
@@ -107,7 +107,7 @@ boolean libre = true;
 Process persona[id:0..N-1]{
     text documento;
 
-    llegada.agregarOrdenado(id);
+    <llegada.agregarOrdenado(id);>
 
     <await (siguiente == id); libre = false;>
     Imprimir(documento);
