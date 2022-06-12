@@ -8,7 +8,7 @@ Process proceso[id:0..4]{
     Object instancia;
     <await (cant > 0); cant--; instancia = instancias.pop(); >
     // Usa instancia
-    instancias.push(instancia);
+    <instancias.push(instancia);>
     <cant++;>
 }
 ```
@@ -77,7 +77,7 @@ Process persona[id:0..N-1]{
     <await (siguiente == id);>
     Imprimir(documento);
 
-    >if (not empty(llegada)){
+    <if (not empty(llegada)){
         siguiente = llegada.pop();
     } else { libre = true; }>
 }
