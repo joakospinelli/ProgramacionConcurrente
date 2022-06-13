@@ -314,6 +314,7 @@ Monitor Corralon {
     }
 }
 ```
+#
 ### 4) Suponga una comisión con 50 alumnos. Cuando los alumnos llegan forman una fila, una vez que están los 50 en la fila el jefe de trabajos prácticos les entrega el número de grupo (número aleatorio del 1 al 25) de tal manera que dos alumnos tendrán el mismo número de grupo (suponga que el jefe posee una función DarNumero() que devuelve en forma aleatoria un número del 1 al 25, el jefe de trabajos prácticos no guarda el número que le asigna a cada alumno). Cuando un alumno ha recibido su número de grupo comienza a realizar la práctica. Al terminar de trabajar, el alumno le avisa al jefe de trabajos prácticos y espera la nota. El jefe de trabajos prácticos, cuando han llegado los dos alumnos de un grupo les devuelve a ambos la nota del GRUPO (el primer grupo en terminar tendrá como nota 25, el segundo 24, y así sucesivamente hasta el último que tendrá nota 1).
 ```java
 // Se me había ocurrido agregar un procedure recibirGrupo() que le da su grupo al alumno con un parámetro de salida (PREGUNTAR)
@@ -393,4 +394,72 @@ Monitor Aula {
         signal_all(correccion[grupoAct]);
     }
 }
+```
+#
+### 5) En un entrenamiento de futbol hay 20 jugadores que forman 4 equipos (cada jugador conoce el equipo al cual pertenece llamando a la función DarEquipo()). Cuando un equipo está listo (han llegado los 5 jugadores que lo componen), debe enfrentarse a otro equipo que también esté listo (los dos primeros equipos en juntarse juegan en la cancha 1, y los otros dos equipos juegan en la cancha 2). Una vez que el equipo conoce la cancha en la que juega, sus jugadores se dirigen a ella. Cuando los 10 jugadores del partido llegaron a la cancha comienza el partido, juegan durante 50 minutos, y al terminar todos los jugadores del partido se retiran (no es necesario que se esperen para salir).
+```java
+Process jugador[id:0..19]{
+    int equipo = darEquipo();
+    
+    entrenamiento[equipo].llegada();
+}
+
+Monitor entrenamiento[id:0..3]{
+
+    int miembros = 0;
+    int cancha;
+    cond espera;
+
+    Procedure llegada(){
+        miembros++;
+        if (miembros == 5){
+            administrador.equipoCompleto(id,cancha);
+        } else {
+            wait(espera);
+        }
+        signal_all(espera);
+        cancha[cancha].jugarPartido();
+    }
+}
+
+Monitor administrador {
+
+    int equiposCompletos;
+    cond equipos;
+    boolean[2] canchasLibres ([2] = true);
+    int[2] equiposCancha ([2] = 0);
+
+    Procedure equipoCompleto(id: IN int, cancha: OUT int){
+        equiposCompletos++;
+        if (equiposCompletos MOD 2 != 0){ // Si falta un equipo me duermo
+            wait(equipos);
+        } else {
+            signal(equipos); // Si hay al menos un equipo para jugar despierto al primero
+        }
+        canchaAct = canchasLibres.indexOf(true);
+
+        equiposCancha[canchaAct]++;
+        if (equiposCancha[canchaAct] == 2) canchasLibres[canchaAct] = false;
+
+        cancha = canchaAct;
+    }
+}
+
+Monitor cancha[id:0..1]{
+
+    int equipos = 0;
+    cond equiposEsperando;
+
+    Procedure jugarPartido(){
+        
+        equipos++;
+        if (equipos < 2){
+            wait(equiposEsperando);
+        } else {
+            signal(equiposEsperando);
+        }
+        delay(50);
+    }
+}
+
 ```
