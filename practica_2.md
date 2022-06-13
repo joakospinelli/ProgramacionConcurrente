@@ -143,6 +143,16 @@ int siguiente = 0;
 
 Process persona[id:0..N-1]{
 
+    if(id > 0)
+        P(personas[id])
+    
+    //SC
+    V(personas[id+1])
+}
+
+
+
+
     P(mutex);
     if (siguiente != id){
         V(mutex);
@@ -230,14 +240,14 @@ Process persona[id:0..N-1]{
     Imprimir(documento);
 
     P(accesoImpresoras);
-    impresorasLibres[impresoraAct] = true;
+    impresorasLibres[miImpresora] = true;
     V(accesoImpresora);
 
     V(impresoras);
 }
 
 Process coordinador {
-    boolean[5] impresorasLibres ([5] = true);
+// Sería global    boolean[5] impresorasLibres ([5] = true);
     int idAct, impresoraAct;
 
     while (true){
@@ -284,6 +294,7 @@ Process alumno[id:0..49]{
     P(elegir);
     cant++;
     if (cant == 50) {
+        // Podría ser un sólo semaforo (no un arreglo) y hacer V 50 veces
         for (int i=0; i<50; i++){ V(empezar[i]); }
     }
     V(elegir);
@@ -294,6 +305,7 @@ Process alumno[id:0..49]{
 
     P(completar[tarea]);
     entregaronTarea[tarea]++;
+    // No respeta el enunciado (el profesor debería verificar que sean 5)
     if (entregaronTarea[tarea] == 5){
         V(completar[tarea]);
 
@@ -365,7 +377,7 @@ Process empleado[id:0..E-1]{
 
         P(accesoCola);
     }
-    V(acessoTareas);
+    V(accesoCola);
 
     P(accesoTerminaron);
     terminaron++;
