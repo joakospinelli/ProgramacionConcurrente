@@ -433,3 +433,157 @@ Monitor cancha[id:0..1]{
 
 }
 ```
+#
+### 6) En una playa hay 5 equipos de 4 personas cada uno (en total son 20 personas donde cada una conoce previamente a que equipo pertenece). Cuando las personas van llegando esperan con los de su equipo hasta que el mismo esté completo (hayan llegado los 4 integrantes), a partir de ese momento el equipo comienza a jugar. El juego consiste en que cada integrante del grupo junta 15 monedas de a una en una playa (las monedas pueden ser de 1, 2 o 5 pesos) y se suman los montos de las 60 monedas conseguidas en el grupo. Al finalizar cada persona debe conocer el monto total juntado por su grupo.
+#### Nota: maximizar la concurrencia. Suponga que para simular la búsqueda de una moneda por parte de una persona existe una función Moneda() que retorna el valor de la moneda encontrada.
+```java
+Process persona[id:0..19]{
+    int miEquipo = ...;
+    int puntos = 0; int puntosEquipo;
+
+    equipo[miEquipo].llegada();
+    for (int i=0;i<15;i++){
+        puntos += Moneda();
+    }
+
+    equipo[miEquipo].sumarPuntos(puntos,puntosEquipo);
+}
+
+Monitor equipo[id:0..4]{
+    
+    cond miembros;
+    int puntosTotales = 0;
+    int llegaron = 0;
+    int terminaron = 0;
+
+    Procedure llegada(){
+        llegaron++;
+        if (llegaron == 4){
+            signal_all(miembros);
+        } else {
+            wait(miembros)
+        }
+    }
+
+    Procedure sumarPuntos(puntos: IN int, final: OUT int){
+        puntosTotales += puntos;
+        terminaron++;
+        if (terminaron == 4){
+            signal_all(miembros);
+        } else {
+            wait(miembros);
+        }
+        final = puntosTotales;
+    }
+}
+```
+#
+### 7) Se debe simular una maratón con C corredores donde en la llegada hay UNA máquinas expendedoras de agua con capacidad para 20 botellas. Además existe un repositor encargado de reponer las botellas de la máquina. Cuando los C corredores han llegado al inicio comienza la carrera. Cuando un corredor termina la carrera se dirigen a la máquina expendedora, espera su turno (respetando el orden de llegada), saca una botella y se retira. Si encuentra la máquina sin botellas, le avisa al repositor para que cargue nuevamente la máquina con 20 botellas; espera a que se haga la recarga; saca una botella y se retira.
+#### Nota: maximizar la concurrencia; mientras se reponen las botellas se debe permitir que otros corredores se encolen. 
+```java
+// No sé como hacer para que los corredores se encolen mientras se reponen botellas; quizás con un monitor aparte (PREGUNTAR)
+Process corredor[id:0..C-1]{
+    maquina.usarMaquina();
+}
+
+Process repositor {
+    while (true){
+        maquina.esperarReponer();
+    }
+}
+
+Monitor maquina {
+    int botellas = 20; int idAux;
+    boolean libre = true;
+    int esperando = 0;
+    
+    cond personas;
+    cond reponer;
+    cond esperandoBotellas;
+
+    Procedure usarMaquina(){
+        if (not libre){
+            esperando++;
+            wait(personas);
+        }
+        else {
+            libre = false;
+        }
+
+        if (botellas == 0){
+            signal(reponer);
+            wait(esperandoBotellas);
+        }
+        botellas--;
+
+        if (esperando > 0){
+            esperando--;
+            signal(personas);
+        } else {
+            libre = true;
+        }
+    }
+
+    Procedure esperarReponer(){
+        if (botellas != 0) wait(reponer);
+        botellas = 20;
+        signal(esperandoBotellas);
+    }
+}
+```
+
+```java
+// Solución usando un monitor aparte (PREGUNTAR)
+Process corredor[id:0..C-1]{
+    cola.llegada();
+    maquina.usar();
+    cola.salida();
+}
+
+Process repositor {
+    while (true){
+        maquina.reponer();
+    }
+}
+
+Monitor cola {
+    boolean libre = true;
+    int esperando = 0;
+
+    cond espera;
+
+    Procedure llegada(){
+        if (not libre) {
+            esperando++;
+            wait(espera);
+        } else {
+            libre = false;
+        }
+    }
+
+    Procedure salida(){
+        if (esperando > 0){
+            signal(espera); esperando--;
+        } else {
+            libre = true;
+        }
+    }
+}
+
+Monitor maquina {
+    int botellas = 20;
+    cond reponer;
+
+    Procedure usar(){
+        if (botellas == 0){
+            signal(reponer);
+        }
+        botellas--;
+    }
+
+    Procedure reponer(){
+        if (botellas > 0) wait(reponer);
+        botellas = 20;
+    }
+}
+```
