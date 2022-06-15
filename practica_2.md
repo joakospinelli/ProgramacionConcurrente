@@ -135,8 +135,6 @@ Process persona[id:0..N-1]{
 ```
 ## 4.c)
 ```java
-// No sé si debería usar mutex cuando pregunto siguiente != id (PREGUNTAR)
-// Está bien usar el if/else para V(mutex) o simplemente lo hago afuera del if? (PREGUNTAR)
 sem mutex = 1;
 sem personas[N] ([N] = 0);
 int siguiente = 0;
@@ -423,5 +421,73 @@ Process armador[id:0..1]{
 
         hacerVentana(marco,vidrio);
     }
+}
+```
+#
+### 8) A una cerealera van T camiones a descargarse trigo y M camiones a descargar maíz. Sólo hay lugar para que 7 camiones a la vez descarguen, pero no pueden ser más de 5 del mismo tipo de cereal.
+#### Nota: no usar un proceso extra que actué como coordinador, resolverlo entre los camiones.
+```java
+sem camiones = 7;
+sem camionesTrigo = 5;
+sem camionesMaiz = 5;
+
+Process camionTrigo[id:0..T-1]{
+    P(camionesTrigo);
+    P(camiones);
+    // Descargar
+    V(camiones);
+    V(camionesTrigo);
+}
+
+P camionMaiz[id:0..M-1]{
+    P(camionesMaiz);
+    P(camiones);
+    // Descargar
+    V(camiones);
+    V(camionesTrigo);
+}
+```
+#
+### 10) En un vacunatorio hay un empleado de salud para vacunar a 50 personas. El empleado de salud atiende a las personas de acuerdo con el orden de llegada y de a 5 personas a la vez. Es decir, que cuando está libre debe esperar a que haya al menos 5 personas esperando, luego vacuna a las 5 primeras personas, y al terminar las deja ir para esperar por otras 5. Cuando ha atendido a las 50 personas el empleado de salud se retira.
+#### Nota: todos los procesos deben terminar su ejecución; asegurarse de no realizar Busy Waiting; suponga que el empleado tienen una función VacunarPersona() que simula que el empleado está vacunando a UNA persona.
+```java
+// El empleado vacuna y libera a los pacientes de a 1, el enunciado dice que vacuna a las 5 y las libera juntas (PREGUNTAR)
+queue personas(int id);
+
+sem atender = 0;
+sem accesoCola = 1;
+sem llegaron = 0;
+
+sem[50] terminar ([50] = 0);
+
+Process empleado {
+    int atendidos = 0;
+    int idAux;
+
+    while (atendidos < 50){
+        P(atender);
+        for (int i=0;i<5;i++){
+            P(accesoCola);
+            idAct = personas.pop();
+            V(accesoCola);
+
+            vacunarPersona(idAct);
+            V(terminar[idAct]);
+            atendidos++;
+        }
+    }
+}
+
+Process persona[id:0..49]{
+
+    P(accesoCola);
+    personas.push(id);
+    llegaron++;
+    if (llegaron == 5){
+        V(atender); llegaron = 0;
+    }
+    V(accesoCola);
+
+    P(terminar[id]);
 }
 ```
