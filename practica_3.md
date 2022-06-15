@@ -1,9 +1,9 @@
 ### 1) Implementar el acceso a una base de datos de solo lectura que puede atender a lo sumo 5 consultas simultáneas.
 ```java
-// El disponibles-- del entrar debería ir en un else? (PREGUNTAR)
 Monitor baseDatos {
     int disponibles = 5;
     cond esperar;
+    int dormidos = 0;
 
     Procedure entrar(){
         if (disponibles == 0)
@@ -16,7 +16,7 @@ Monitor baseDatos {
     Procedure liberar(){
         if(dormidos > 0)
             signal(esperar);
-            dormidos--
+            dormidos--;
         else
             disponibles++;
     }
@@ -40,8 +40,6 @@ Process persona[id:0..N-1]{
 
 ## 2.a)
 ```java
-// No sé si fotocopiar() lo tiene que hacer la persona o la fotocopiadora (PREGUNTAR)
-// Era de la persona 
 Process persona[id:0..N-1]{
     text documento;
     fotocopiadora.usar(documento);
@@ -58,7 +56,7 @@ Monitor fotocopiadora {
 Process persona[id:0..N-1]{
     text documento;
     fotocopiadora.llegada();
-    fotocopiadora.usar(documento);
+    Fotocopiar(documento);
     fotocopiadora.liberar();
 }
 
@@ -75,10 +73,6 @@ Monitor fotocopiadora {
         }
     }
 
-    Procedure usar(text documento){
-        Fotocopiar(documento);
-    }
-
     Procedure liberar(){
         if (esperando > 0){
             esperando--; signal(espera);
@@ -93,7 +87,7 @@ Process persona[id:0..N-1]{
     int edad = ...;
 
     fotocopiadora.llegada(id,edad);
-    fotocopiadora.usar(documento);
+    Fotocopiar(documento);
     fotocopiadora.liberar();
 }
 
@@ -111,10 +105,6 @@ Monitor fotocopiadora {
         }
     }
 
-    Procedure usar(text documento){
-        Fotocopiar(documento);
-    }
-
     Procedure liberar(){
         int siguiente;
 
@@ -129,11 +119,10 @@ Monitor fotocopiadora {
 ```
 ## 2.d)
 ```java
-// No sé si la persona tiene que esperar a que llegue X-1 o si cuando X-1 no está la puede usar (PREGUNTAR)
 Process persona[id:0..N-1]{
     text documento;
     fotocopiadora.llegada(id);
-    fotocopiadora.usar(documento);
+    Fotocopiar(documento);
     fotocopiadora.liberar();
 }
 
@@ -147,10 +136,6 @@ Monitor fotocopiadora {
         }
     }
 
-    Procedure usar(text documento){
-        Fotocopiar(documento);
-    }
-
     Procedure liberar(){
         siguiente++;
         signal espera[siguiente];
@@ -159,12 +144,10 @@ Monitor fotocopiadora {
 ```
 ## 2.e)
 ```java
-// Este puede estar todo mal (PREGUNTAR)
-// No sé si es necesario usar el if (esperando == 0) en la llegada (PREGUNTAR) No iba
 Process persona[id:0..N-1]{
     text documento;
     fotocopiadora.llegada();
-    fotocopiadora.usar(documento);
+    Fotocopiar(documento);
     fotocopiadora.liberar();
 }
 
@@ -181,15 +164,9 @@ Monitor fotocopiadora {
     int esperando = 0;
 
     Procedure llegada(){
-        //if (esperando == 0){
-            signal(empleado);
-        //}
+        signal(empleado);
         esperando++;
         wait(espera);
-    }
-
-    Procedure usar(documento: IN text){
-        Fotocopiar(documento);
     }
 
     Procedure liberar(){
@@ -211,7 +188,7 @@ Process persona[id:0..N-1]{
     int miImpresora;
 
     fotocopiadora.llegada(id,miImpresora);
-    fotocopiadora.usar(documento);
+    Fotocopiar(documento);
     fotocopiadora.liberar(miImpresora);
 }
 
@@ -232,16 +209,10 @@ Monitor fotocopiadora {
     int ocupadas = 0;
 
     Procedure llegada(id: IN int; impresora: OUT int){
-        //if (esperando == 0){
-            signal(empleado);
-        //}
+        signal(empleado);
         cola.push(id);
         wait(espera);
         impresora = impresoraAsignada[id];
-    }
-
-    Procedure usar(documento: IN text){
-        Fotocopiar(documento);
     }
 
     Procedure liberar(impresora: IN int){
@@ -269,11 +240,7 @@ Monitor fotocopiadora {
 ```java
 Process cliente[id:0..C-1]{
     text lista, comp;
-    Corralon.llegada();
-.....
-
-
-    Corralon.pasar(lista,comp);
+    Corralon.llegada(lista,comp);
 }
 
 Process empleado{
@@ -294,37 +261,32 @@ Monitor Corralon {
     boolean libre = true;
     text listaAct, compAct;
 
-    Procedure llegada(){
+    Procedure llegada(lista: IN text,comp: OUT text){
         if (not libre){
             esperando++; wait(espera);
         } else {
             libre = false;
         }
-    }
-
-    Procedure pasar(lista: IN text;comp: OUT text){
         listaAct = lista;
         hayLista = true;
         signal(empleado);
         wait(esperarComprobante);
         comp = compAct;
-        signal(recibiComp)
-        if (esperando > 0) 
-            signal(espera);
-            esperando--;
-        else 
-            libre = true;
+        signal(recibiComp);
+        if (esperando > 0) {
+            signal espera; esperando--;
+        } else libre = true;
     }
 
     Procedure esperarCliente(lista: OUT text){
         if (not hayLista) wait(empleado);
         lista = listaAct;
+        hayLista = false;
     }
 
     Procedure entregarComprobante(comp: IN text){
         compAct = comp; signal(esperarComprobante);
         wait(recibiComp);
-        hayLista = false;
     }
 }
 ```
@@ -336,11 +298,10 @@ Process alumno[id:0..49]{
     int miGrupo;
     int miNota;
 
-    Aula.llegada(id);
-    Aula.recibirGrupo(id,miGrupo);
+    Aula.llegada(id,miGrupo);
     // Hace práctica
-    Aula.entregar(id);
-    Aula.verNota(id,miNota);
+    Aula.entregar(miGrupo);
+    Aula.verNota(miGrupo,miNota);
 }
 
 Process profesor{
@@ -373,17 +334,14 @@ Monitor Aula {
         grupo = grupoAct;
     }
 
-    Procedure entregar(id: IN int){
-        entregasGrupo[grupoAsignado[id]]++;
-        if (entregasGrupo[grupoAsignado[id]] == 2){
-            entregas.push(grupoAsignado[id]);
-            signal(hayEntrega);
-        }
-        wait(correccion[grupoAsignado[id]]);
+    Procedure entregar(grupo: IN int){
+        entregas.push(grupo);
+        signal(hayEntrega);
+        wait(correccion[grupo]);
     }
 
-    Procedure verNota(id: IN int; miNota: OUT int){
-        miNota = notas[grupoAsignado[id]];
+    Procedure verNota(grupo: IN int; miNota: OUT int){
+        miNota = notas[grupo];
     }
 
     Procedure esperarAlumnos(){
@@ -403,24 +361,23 @@ Monitor Aula {
 
     Procedure corregir(i: IN int){
         grupoAct = entregas.pop();
-        notas[grupoAct] = i;
-        contNota--;
-
-        signal_all(correccion[grupoAct]);
+        entregasGrupo[grupoAct]++;
+        if (entregasGrupo[grupoAct] == 2){
+            notas[grupoAct] = i;
+            signal_all(correccion[grupoAct]);
+        }
     }
 }
 ```
 #
 ### 5) En un entrenamiento de futbol hay 20 jugadores que forman 4 equipos (cada jugador conoce el equipo al cual pertenece llamando a la función DarEquipo()). Cuando un equipo está listo (han llegado los 5 jugadores que lo componen), debe enfrentarse a otro equipo que también esté listo (los dos primeros equipos en juntarse juegan en la cancha 1, y los otros dos equipos juegan en la cancha 2). Una vez que el equipo conoce la cancha en la que juega, sus jugadores se dirigen a ella. Cuando los 10 jugadores del partido llegaron a la cancha comienza el partido, juegan durante 50 minutos, y al terminar todos los jugadores del partido se retiran (no es necesario que se esperen para salir).
 ```java
-
-// El jugador debería jugar el partido, el delay lo hace un proceso aparte
 Process jugador[id:0..19]{
     int equipo = darEquipo();
     
     entrenamiento[equipo].llegada(cancha);
-    // camina hacia 
     cancha[cancha].jugarPartido();
+    delay(50);
 }
 
 Monitor entrenamiento[id:0..3]{
@@ -429,7 +386,7 @@ Monitor entrenamiento[id:0..3]{
     int cancha;
     cond espera;
 
-    Procedure llegada(c OUT int){
+    Procedure llegada(c: OUT int){
         miembros++;
         if (miembros == 5){
             administrador.equipoCompleto(id,cancha);
@@ -437,9 +394,7 @@ Monitor entrenamiento[id:0..3]{
             wait(espera);
         }
         signal_all(espera);
-        c = cancha
-   
-   
+        c = cancha;
     }
 }
 
@@ -452,33 +407,29 @@ Monitor administrador {
 
     Procedure equipoCompleto(id: IN int, cancha: OUT int){
         equiposCompletos++;
-        if (equiposCompletos < 2){ // Si falta un equipo me duermo
+        if (equiposCompletos < 2){
             cancha = 1;
         } else {
-            cancha = 2; // Si hay al menos un equipo para jugar despierto al primero
+            cancha = 2;
         }
     }
 }
 
+// No sé si está bien implementado el jugarPartido (PREGUNTAR)
 Monitor cancha[id:0..1]{
 
     int equipos = 0;
-    cond jugadoresEsperando;
+    cond jugar;
 
     Procedure jugarPartido(){
-        
         jugadores++;
-        if (jugadores == 10){
-            signal(empezar)
+        if (jugadores < 10){
+            wait(jugar);
+        } else {
+            delay(50);
+            signal_all(jugar);
         }
-        wait(terminoPartido);
     }
 
-    Procedure iniciarPartido(){
-        if(jugadores < 10)
-            wait(empezar)
-        delay(50);
-        signalall(terminoPartido)
-    }
 }
 ```

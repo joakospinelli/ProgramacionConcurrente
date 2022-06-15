@@ -143,31 +143,10 @@ int siguiente = 0;
 
 Process persona[id:0..N-1]{
 
-    if(id > 0)
-        P(personas[id])
-    
-    //SC
-    V(personas[id+1])
-}
-
-
-
-
-    P(mutex);
-    if (siguiente != id){
-        V(mutex);
-        P(personas[id]);
-    } else {
-        V(mutex);
-    }
+    if(id > 0) P(personas[id]);
 
     Imprimir(documento);
-
-    P(mutex);
-    siguiente++;
-    V(mutex);
-
-    V(personas[siguiente]);
+    V(personas[id+1]);
 }
 ```
 ## 4.d)
@@ -213,7 +192,7 @@ Process coordinador {
 
 ## 4.e)
 ```java
-// No sé si es necesario el semáforo de acceso a impresoras (PREGUNTAR)
+// No sé si es necesario el semáforo de acceso a impresoras (PREGUNTAR) --> No está "mal" pero en este caso es innecesario; si fuesen varios coordinadores sí lo necesito
 sem accesoCola = 1;
 sem accesoImpresoras = 1;
 sem personasEsperando = 0;
@@ -221,6 +200,7 @@ sem impresoras = 5;
 
 sem[N] personas ([N] = 0);
 
+boolean[5] impresorasLibres ([5] = true);
 int[N] impresoraAsignada;
 
 queue llegada(int);
@@ -247,7 +227,6 @@ Process persona[id:0..N-1]{
 }
 
 Process coordinador {
-// Sería global    boolean[5] impresorasLibres ([5] = true);
     int idAct, impresoraAct;
 
     while (true){
@@ -275,17 +254,16 @@ Process coordinador {
 #### Nota: Para elegir la tarea suponga que existe una función elegir que le asigna una tarea a un alumno (esta función asignará 10 tareas diferentes entre 50 alumnos, es decir, que 5 alumnos tendrán la tarea 1, otros 5 la tarea 2 y así sucesivamente para las 10 tareas).
 
 ```java
-// Acá hice lo mismo que en el 4.c con V(completar[tarea]) en el if/else (PREGUNTAR / CORREGIR)
 int cant = 0;
-int[10] entregaronTarea ([10] = 0);
+
 int[10] notaTarea ([10] = 0);
 queue tareasEntregadas(int);
 
 sem elegir = 1;
 sem accesoCola = 1;
 sem hayTarea = 0;
+sem empezar = 0;
 
-sem[50] empezar ([50] = 0);
 sem[10] completar ([10] = 1);
 
 Process alumno[id:0..49]{
@@ -294,35 +272,26 @@ Process alumno[id:0..49]{
     P(elegir);
     cant++;
     if (cant == 50) {
-        // Podría ser un sólo semaforo (no un arreglo) y hacer V 50 veces
-        for (int i=0; i<50; i++){ V(empezar[i]); }
+        for (int i=0; i<50; i++){ V(empezar); }
     }
     V(elegir);
 
-    P(empezar[id]);
+    P(empezar);
 
     // Hace tarea
 
-    P(completar[tarea]);
-    entregaronTarea[tarea]++;
-    // No respeta el enunciado (el profesor debería verificar que sean 5)
-    if (entregaronTarea[tarea] == 5){
-        V(completar[tarea]);
+    P(accesoCola);
+    tareasEntregadas.push(tarea);
+    V(accesoCola);
 
-        P(accesoCola);
-        tareasEntregadas.push(tarea);
-        V(accesoCola);
-
-        V(hayTarea);
-    } else {
-        V(completar[tarea]);
-    }
+    V(hayTarea);
 
     P(tareaCorregida[tarea]);
 }
 
 Process profesor {
     int tareaAct;
+    int[10] entregaronTarea ([10] = 0);
 
     for (int i=10;i>0;i++){
         P(hayTarea);
@@ -331,7 +300,11 @@ Process profesor {
         tareaAct = tareasEntregadas.pop();
         V(accesoCola);
 
-        notaTarea[tareaAct] = i;
+        entregaronTarea[tareaAct]++;
+        if (entregaronTarea[tareaAct] == 5){
+            notaTarea[tareaAct] = i;
+        }
+        
         for (int i=0;i<5;i++){
             V(tareaCorregida[tareaAct]);
         }
@@ -398,7 +371,6 @@ Process empresa {
 #### • El vidriero continuamente hace vidrios y los deja en otro depósito con capacidad para 50 vidrios.
 #### • Los armadores continuamente toman un marco y un vidrio (en ese orden) de los depósitos correspondientes y arman la ventana (cada ventana es armada por un único armador)
 ```java
-// Agregué semáforos para asegurarme de que haya un marco/vidrios cuando hago un pop() en el armador (PREGUNTAR)
 sem cantMarcos = 30;
 sem accesoMarcos = 1;
 sem hayMarcos = 0;
