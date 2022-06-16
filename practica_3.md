@@ -293,7 +293,7 @@ Monitor Corralon {
 #
 ### 4) Suponga una comisión con 50 alumnos. Cuando los alumnos llegan forman una fila, una vez que están los 50 en la fila el jefe de trabajos prácticos les entrega el número de grupo (número aleatorio del 1 al 25) de tal manera que dos alumnos tendrán el mismo número de grupo (suponga que el jefe posee una función DarNumero() que devuelve en forma aleatoria un número del 1 al 25, el jefe de trabajos prácticos no guarda el número que le asigna a cada alumno). Cuando un alumno ha recibido su número de grupo comienza a realizar la práctica. Al terminar de trabajar, el alumno le avisa al jefe de trabajos prácticos y espera la nota. El jefe de trabajos prácticos, cuando han llegado los dos alumnos de un grupo les devuelve a ambos la nota del GRUPO (el primer grupo en terminar tendrá como nota 25, el segundo 24, y así sucesivamente hasta el último que tendrá nota 1).
 ```java
-// Se me había ocurrido agregar un procedure recibirGrupo() que le da su grupo al alumno con un parámetro de salida (PREGUNTAR) HAY QUE HACERLO (Se puede combinar con la llegada)
+// Unificar procesos
 Process alumno[id:0..49]{
     int miGrupo;
     int miNota;
@@ -331,7 +331,7 @@ Monitor Aula {
         cant++;
         if (cant == 50) signal(JTP);
         wait(espera[id]);
-        grupo = grupoAct;
+        grupo = grupoAsignado[id];
     }
 
     Procedure entregar(grupo: IN int){
@@ -377,7 +377,6 @@ Process jugador[id:0..19]{
     
     entrenamiento[equipo].llegada(cancha);
     cancha[cancha].jugarPartido();
-    delay(50);
 }
 
 Monitor entrenamiento[id:0..3]{
@@ -415,7 +414,6 @@ Monitor administrador {
     }
 }
 
-// No sé si está bien implementado el jugarPartido (PREGUNTAR)
 Monitor cancha[id:0..1]{
 
     int equipos = 0;
@@ -481,59 +479,6 @@ Monitor equipo[id:0..4]{
 ### 7) Se debe simular una maratón con C corredores donde en la llegada hay UNA máquinas expendedoras de agua con capacidad para 20 botellas. Además existe un repositor encargado de reponer las botellas de la máquina. Cuando los C corredores han llegado al inicio comienza la carrera. Cuando un corredor termina la carrera se dirigen a la máquina expendedora, espera su turno (respetando el orden de llegada), saca una botella y se retira. Si encuentra la máquina sin botellas, le avisa al repositor para que cargue nuevamente la máquina con 20 botellas; espera a que se haga la recarga; saca una botella y se retira.
 #### Nota: maximizar la concurrencia; mientras se reponen las botellas se debe permitir que otros corredores se encolen. 
 ```java
-// No sé como hacer para que los corredores se encolen mientras se reponen botellas; quizás con un monitor aparte (PREGUNTAR)
-Process corredor[id:0..C-1]{
-    maquina.usarMaquina();
-}
-
-Process repositor {
-    while (true){
-        maquina.esperarReponer();
-    }
-}
-
-Monitor maquina {
-    int botellas = 20; int idAux;
-    boolean libre = true;
-    int esperando = 0;
-    
-    cond personas;
-    cond reponer;
-    cond esperandoBotellas;
-
-    Procedure usarMaquina(){
-        if (not libre){
-            esperando++;
-            wait(personas);
-        }
-        else {
-            libre = false;
-        }
-
-        if (botellas == 0){
-            signal(reponer);
-            wait(esperandoBotellas);
-        }
-        botellas--;
-
-        if (esperando > 0){
-            esperando--;
-            signal(personas);
-        } else {
-            libre = true;
-        }
-    }
-
-    Procedure esperarReponer(){
-        if (botellas != 0) wait(reponer);
-        botellas = 20;
-        signal(esperandoBotellas);
-    }
-}
-```
-
-```java
-// Solución usando un monitor aparte (PREGUNTAR)
 Process corredor[id:0..C-1]{
     cola.llegada();
     maquina.usar();

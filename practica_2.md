@@ -291,6 +291,7 @@ Process profesor {
     int tareaAct;
     int[10] entregaronTarea ([10] = 0);
 
+    // Este debería ser un for de 50 (porque tiene 50 tareas) y tener un conteo separado con el puntaje
     for (int i=10;i>0;i++){
         P(hayTarea);
 
@@ -451,7 +452,7 @@ P camionMaiz[id:0..M-1]{
 ### 10) En un vacunatorio hay un empleado de salud para vacunar a 50 personas. El empleado de salud atiende a las personas de acuerdo con el orden de llegada y de a 5 personas a la vez. Es decir, que cuando está libre debe esperar a que haya al menos 5 personas esperando, luego vacuna a las 5 primeras personas, y al terminar las deja ir para esperar por otras 5. Cuando ha atendido a las 50 personas el empleado de salud se retira.
 #### Nota: todos los procesos deben terminar su ejecución; asegurarse de no realizar Busy Waiting; suponga que el empleado tienen una función VacunarPersona() que simula que el empleado está vacunando a UNA persona.
 ```java
-// El empleado vacuna y libera a los pacientes de a 1, el enunciado dice que vacuna a las 5 y las libera juntas (PREGUNTAR)
+// El V(terminar[id]) debería ir fuera del for y el empleado debería mantener las id del grupo actual
 queue personas(int id);
 
 sem atender = 0;
